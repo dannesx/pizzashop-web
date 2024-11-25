@@ -1,9 +1,11 @@
+import { useMutation } from '@tanstack/react-query'
 import { Helmet } from 'react-helmet-async'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
+import { signIn } from '@/api/sign-in'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,24 +17,37 @@ const SignInSchema = z.object({
 type SignInForm = z.infer<typeof SignInSchema>
 
 const SignIn = () => {
+  const [searchParams] = useSearchParams()
   const {
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<SignInForm>()
+  } = useForm<SignInForm>({
+    defaultValues: {
+      email: searchParams.get('email') ?? '',
+    },
+  })
   const navigate = useNavigate()
 
+  const { mutateAsync: authenticate } = useMutation({
+    mutationFn: signIn,
+  })
+
   async function handleSignIn(data: SignInForm) {
-    console.log(data)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    toast.success('Enviamos um link de autenticação para seu e-mail', {
-      action: {
-        label: 'Reenviar e-mail',
-        onClick: () => {
-          navigate('/')
+    try {
+      await authenticate({ email: data.email })
+
+      toast.success('Enviamos um link de autenticação para seu e-mail', {
+        action: {
+          label: 'Reenviar e-mail',
+          onClick: () => {
+            navigate('/')
+          },
         },
-      },
-    })
+      })
+    } catch (error) {
+      toast.error('Ocorreu um erro ao tentar acessar o painel')
+    }
   }
   return (
     <>
